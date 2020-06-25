@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> -->
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <title>Data Visualization</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
+    <!-- <script src="app.js"></script> -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> 
+
+     <!-- <script src="http://d3js.org/d3.v3.min.js" language="JavaScript"></script> -->
+    <!-- <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js" language="JavaScript"></script> -->
+  </head>
+  <body>
+
+
+    <!-- Slideshow container -->
+    <div class="slideshow-container">
+      <div class="mySlides fade">
+        <div class="numbertext">1 / 4</div>
+        <img src="img1.jpg" style="width:100%">
+        <div class="text">Caption Two</div>
+      </div>
+
+    <!-- Full-width images with number and caption text -->
+    <div class="mySlides fade">
+      <div class="numbertext">2 / 4</div>
+      <!-- <img src="img1.jpg" style="width:100%"> -->
+      <!-- <div class="text">Caption Text</div> -->
+      <h1 style="font-size:225%;">Gun Violence Scatter Plot</h1>
+      <div id= "filter">States</div>
+      <script>
+        //http://bl.ocks.org/weiglemc/6185069
+        (function iife(){
+          // add the tooltip area to the webpage
+          var tooltip = d3.select(container).append('div').attr('class', 'tooltip').style("opacity", 0);
+          // margin 
+          var margin = {top: 20, right: 20, bottom: 30, left: 40},
+          width = 960 - margin.left - margin.right,
+          height = 500 - margin.top - margin.bottom;
+
+      
+
+          /* 
+          * value accessor - returns the value to encode for a given data object.
+          * scale - maps value to a visual display encoding, such as a pixel position.
+          * map function - maps from data value to display value
+          * axis - sets up axis
+          */
+         // setup x 
+
+      var xValue = function(d) { return d.Contributions;}, // data -> value 
+          xScale = d3.scale.linear().range([0, width]), // value -> display
+          xMap = function(d) { return xScale(xValue(d));}, // data -> display
+          xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+        // setup y
+      var yValue = function(d) { return d["Protein (g)"];}, // data -> value
+          yScale = d3.scale.linear().range([height, 0]), // value -> display
+          yMap = function(d) { return yScale(yValue(d));}, // data -> display
+          yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+        // setup fill color
+      var cValue = function(d) { return d.State;},
+          color = d3.scale.category10();
+          // state List
+      var dropDown = d3.select("#filter").append("select")
+                    .attr("name", "state-list");
+
+      var container = document.currentScript.parentNode;
+      // add the graph canvas to the body of the webpage
+      var svg = d3.select(container).append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+                // load data
+                d3.csv("data.csv", function(error, data) {
+                    // change string (from CSV) into number format
+                    data.forEach(function(d) {
+                        d.Contributions = +d.Contributions;
+                        d.Deaths = +d.Deaths;
+                        //  console.log(d);
+                    });
+                    var options = dropDown.selectAll("option")
+                        .data(data)
+                        .enter()
+                        .append("option");
+                    options.text(function(d) {
+                            return d.State;
+                        })
+                        .attr("value", function(d) {
+                            return d.State;
+                        });
+                    //   // don't want dots overlapping axis, so add in buffer to data domain
+                    xScale.domain([d3.min(data, xValue) - 1, d3.max(data, xValue) + 1]);
+                    yScale.domain([d3.min(data, yValue) - 1, d3.max(data, yValue) + 1]);
+                    //   // x-axis
+                    svg.append("g")
+              
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .append("text")
+                        .attr("class", "label")
+                        .attr("x", width)
+                        .attr("y", -6)
+                        .style("text-anchor", "end")
+                        .text("Contributions");
+                    //   // y-axis
+                    svg.append("g")
+                       
+                        .call(yAxis)
+                        .append("text")
+                        .attr("class", "label")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 6)
+                        .attr("dy", ".71em")
+                        .style("text-anchor", "end")
+                        .text("Deaths");
+                    // draw dots
+                    svg.selectAll(".dotted")
+                        .data(data)
+                        .enter().append("circle")
+                        .attr("class", "dotted")
+                        .attr("r", 3.5)
+                        .attr("cx", xMap)
+                        .attr("cy", yMap)
+                        .style("fill", function(d) {
+                            return color(cValue(d));
+                        })
+                        .on("mouseover", function(d) {
+                            tooltip.transition()
+                                .duration(200)
+                                .style("opacity", .9);
+                            tooltip.html(d["State"] + "<br/> (" + xValue(d) + ", " + yValue(d) + ")")
+                                .style("left", (d3.event.pageX + 5) + "px")
+                                .style("top", (d3.event.pageY - 28) + "px");
+                        })
+                        .on("mouseout", function(d) {
+                            tooltip.transition()
+                                .duration(500)
+                                .style("opacity", 0);
+                        });
+                    // draw legend
+                    var legend = svg.selectAll(".legend")
+                        .data(color.domain())
+                        .enter().append("g")
+                        .attr("class", "legend")
+                        .attr("transform", function(d, i) {
+                            return "translate(" + (i * 20 + 137) + ", 6)";
+                        });
+                    // draw legend colored rectangles
+                    var boxSize = 17;
+                    legend.append("rect")
+                        .attr("x", 0)
+                        .attr("width", boxSize)
+                        .attr("height", boxSize)
+                        .style("fill", color);
+                    // draw legend text
+                    legend.append("text")
+                        .attr("x", -8.2)
+                        .attr("y", 19)
+                        .attr("dy", ".35em")
+                        .style("text-anchor", "end")
+                        .attr("transform", "rotate(-43)")
+                        .text(function(d) {
+                            return d;
+                        })
+                    dropDown.on("change", function() {
+                        var selected = this.value;
+                        displayOthers = this.checked ? "inline" : "none";
+                        display = this.checked ? "none" : "inline";
+                        svg.selectAll(".dotted")
+                            .filter(function(d) {
+                                return selected != d.State;
+                            })
+                            .attr("display", displayOthers);
+                        svg.selectAll(".dotted")
+                            .filter(function(d) {
+                                return selected == d.State;
+                            })
+                            .attr("display", display);
+                    });
+                });
+                }())
+
+
+
+
+
+
+
+
+
+
+
+      </script>
+    </div>
+
+    <div class="mySlides fade">
+      <div class="numbertext">3 / 4</div>
+      <img src="img2.jpg" style="width:100%">
+      <div class="text">Caption Two</div>
+    </div>
+
+    <div class="mySlides fade">
+      <div class="numbertext">4 / 4</div>
+      <img src="img3.jpg" style="width:100%">
+      <div class="text">Caption Three</div>
+    </div>
+
+    <!-- Next and previous buttons -->
+      <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+      <a class="next" onclick="plusSlides(1)">&#10095;</a>
+    </div>
+    <br>
+
+    <!-- The dots/circles -->
+    <div style="text-align:center">
+      <span class="dot" onclick="currentSlide(1)"></span>
+        <span class="dot" onclick="currentSlide(2)"></span>
+        <span class="dot" onclick="currentSlide(3)"></span>
+        <span class="dot" onclick="currentSlide(4)"></span>
+        <span class="dot" onclick="currentSlide(5)"></span>
+    </div>
+
+    <script>
+       var slideIndex = 1;
+        showSlides(slideIndex);
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+        function showSlides(n) {
+            var i;
+            var slides = document.getElementsByClassName("mySlides");
+            var dots = document.getElementsByClassName("dot");
+            if (n > slides.length) {
+                slideIndex = 1
+            }
+            if (n < 1) {
+                slideIndex = slides.length
+            }
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            for (i = 0; i < dots.length; i++) {
+                dots[i].className = dots[i].className.replace(" active", "");
+            }
+            slides[slideIndex - 1].style.display = "block";
+            dots[slideIndex - 1].className += " active";
+        }
+    </script>
+  
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script> -->
+  </body> 
+</html>
